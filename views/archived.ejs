@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archived Products</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <h1>Archived Products</h1>
+
+    <h2>Archived Products List</h2>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Price</th>
+            <th>Stock</th>
+        </tr>
+        <% products.forEach(product => { %>
+            <tr>
+                <td><%= product.name %></td>
+                <td><%= product.code %></td>
+                <td>ETB <%= product.price %></td>
+                <td><%= product.stock %></td>
+            </tr>
+        <% }) %>
+    </table>
+
+    <a href="/">
+        <button>Back to Active Products</button>
+    </a>
+
+</body>
+</html>
