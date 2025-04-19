@@ -1,19 +1,31 @@
 const express = require('express');
 const session = require('express-session');
+const redis = require('redis');
+const connectRedis = require('connect-redis');
 const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
 
+// Set up Redis client
+const RedisClient = redis.createClient({
+    host: 'localhost',  // Or the Redis server's host if it's remote
+    port: 6379,         // Default Redis port
+});
+
+// Initialize connect-redis with express-session
+const RedisStore = connectRedis(session);
+
 // Middleware setup
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Setup session
+// Setup session with RedisStore
 app.use(session({
+    store: new RedisStore({ client: RedisClient }),
     secret: 'your-secret-key',
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
 }));
 
 // Serve static files
