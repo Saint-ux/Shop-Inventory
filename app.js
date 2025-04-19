@@ -30,19 +30,12 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// Middleware to require login for protected routes
-function requireLogin(req, res, next) {
-  if (req.session.loggedIn) {
-    return next();  // Continue to the route
-  }
-  res.redirect('/login');  // Redirect to login if not logged in
-}
-
-// Homepage route (protected by login)
-app.get('/', requireLogin, (req, res) => {
-  res.render('index', { products: products.filter(p => !p.archived), totalEarnings });
+// Route for the login page
+app.get('/login', (req, res) => {
+  res.render('login', { error: null }); // This should render the login page
 });
 
+// Handle login post request
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
@@ -55,67 +48,23 @@ app.post('/login', (req, res) => {
   }
 });
 
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
-});
+// Middleware to require login for protected routes
+function requireLogin(req, res, next) {
+  if (req.session.loggedIn) {
+    return next();  // Continue to the route
+  }
+  res.redirect('/login');  // Redirect to login if not logged in
+}
 
 // Inventory Routes
 app.get('/', requireLogin, (req, res) => {
   res.render('index', { products: products.filter(p => !p.archived), totalEarnings });
 });
 
-app.post('/add-product', requireLogin, (req, res) => {
-  const { name, code, price, stock } = req.body;
-  products.push({
-    id: Date.now(),
-    name,
-    code,
-    price: parseFloat(price),
-    stock: parseInt(stock),
-    archived: false
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/login');
   });
-  saveData();
-  res.redirect('/');
-});
-
-app.post('/sell', requireLogin, (req, res) => {
-  const { product_id, quantity } = req.body;
-  const product = products.find(p => p.id == product_id);
-  if (product && product.stock >= quantity) {
-    product.stock -= quantity;
-    totalEarnings += product.price * quantity;
-    saveData();
-    res.redirect('/');
-  } else {
-    res.send('Not enough stock.');
-  }
-});
-
-app.post('/edit-product', requireLogin, (req, res) => {
-  const { product_id, newPrice, newStock } = req.body;
-  const product = products.find(p => p.id == product_id);
-  if (product) {
-    product.price = parseFloat(newPrice);
-    product.stock = parseInt(newStock);
-    saveData();
-  }
-  res.redirect('/');
-});
-
-app.post('/archive-product', requireLogin, (req, res) => {
-  const product = products.find(p => p.id == req.body.product_id);
-  if (product) {
-    product.archived = true;
-    product.stock = 0;
-    saveData();
-  }
-  res.redirect('/');
-});
-
-app.get('/archived', requireLogin, (req, res) => {
-  res.render('archived', { products: products.filter(p => p.archived) });
 });
 
 // Start Server
