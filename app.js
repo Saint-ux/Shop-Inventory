@@ -4,28 +4,20 @@ const path = require('path');
 const session = require('express-session');
 const app = express();
 
+// File path
 const DATA_PATH = path.join(__dirname, 'data.json');
 
-// Safe load of data with fallback
-let products = [];
-let totalEarnings = 0;
+// Load initial data
+let { products, totalEarnings } = fs.existsSync(DATA_PATH)
+  ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
+  : { products: [], totalEarnings: 0 };
 
-if (fs.existsSync(DATA_PATH)) {
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'));
-    products = Array.isArray(data.products) ? data.products : [];
-    totalEarnings = typeof data.totalEarnings === 'number' ? data.totalEarnings : 0;
-  } catch (err) {
-    console.error('Failed to parse data.json. Resetting data.');
-  }
-}
-
-// Save helper
+// Helper to save data to file
 function saveData() {
   fs.writeFileSync(DATA_PATH, JSON.stringify({ products, totalEarnings }, null, 2));
 }
 
-// Set EJS and middleware
+// EJS views
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -38,24 +30,28 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// Auth middleware
+// Middleware to require login for protected routes
 function requireLogin(req, res, next) {
-  if (req.session.loggedIn) return next();
-  res.redirect('/login');
+  if (req.session.loggedIn) {
+    return next();  // Continue to the route
+  }
+  res.redirect('/login');  // Redirect to login if not logged in
 }
 
-// Login page
-app.get('/login', (req, res) => {
-  res.render('login', { error: null });
+// Homepage route (protected by login)
+app.get('/', requireLogin, (req, res) => {
+  res.render('index', { products: products.filter(p => !p.archived), totalEarnings });
 });
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
+
+  // Check if login credentials match
   if (username === 'admin' && password === 'password') {
-    req.session.loggedIn = true;
-    res.redirect('/');
+    req.session.loggedIn = true;  // Set session to logged in
+    res.redirect('/');  // Redirect to the homepage (inventory)
   } else {
-    res.render('login', { error: 'Incorrect username or password.' });
+    res.render('login', { error: 'Incorrect username or password.' });  // Show error on login page
   }
 });
 
@@ -65,15 +61,11 @@ app.get('/logout', (req, res) => {
   });
 });
 
-// Home - inventory view
+// Inventory Routes
 app.get('/', requireLogin, (req, res) => {
-  res.render('index', {
-    products: products.filter(p => !p.archived),
-    totalEarnings
-  });
+  res.render('index', { products: products.filter(p => !p.archived), totalEarnings });
 });
 
-// Add product
 app.post('/add-product', requireLogin, (req, res) => {
   const { name, code, price, stock } = req.body;
   products.push({
@@ -88,15 +80,12 @@ app.post('/add-product', requireLogin, (req, res) => {
   res.redirect('/');
 });
 
-// Sell product
 app.post('/sell', requireLogin, (req, res) => {
   const { product_id, quantity } = req.body;
   const product = products.find(p => p.id == product_id);
-  const qty = parseInt(quantity);
-
-  if (product && product.stock >= qty) {
-    product.stock -= qty;
-    totalEarnings += product.price * qty;
+  if (product && product.stock >= quantity) {
+    product.stock -= quantity;
+    totalEarnings += product.price * quantity;
     saveData();
     res.redirect('/');
   } else {
@@ -104,7 +93,6 @@ app.post('/sell', requireLogin, (req, res) => {
   }
 });
 
-// Edit product
 app.post('/edit-product', requireLogin, (req, res) => {
   const { product_id, newPrice, newStock } = req.body;
   const product = products.find(p => p.id == product_id);
@@ -116,7 +104,6 @@ app.post('/edit-product', requireLogin, (req, res) => {
   res.redirect('/');
 });
 
-// Archive product
 app.post('/archive-product', requireLogin, (req, res) => {
   const product = products.find(p => p.id == req.body.product_id);
   if (product) {
@@ -127,14 +114,11 @@ app.post('/archive-product', requireLogin, (req, res) => {
   res.redirect('/');
 });
 
-// Archived products view
 app.get('/archived', requireLogin, (req, res) => {
-  res.render('archived', {
-    products: products.filter(p => p.archived)
-  });
+  res.render('archived', { products: products.filter(p => p.archived) });
 });
 
-// Start server
+// Start Server
 app.listen(3000, () => {
-  console.log('Server running at http://localhost:3000');
+  console.log('Server running on http://localhost:3000');
 });
