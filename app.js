@@ -1,74 +1,57 @@
 const express = require('express');
 const session = require('express-session');
-const redis = require('redis');
-const connectRedis = require('connect-redis');
-const bodyParser = require('body-parser');
 const path = require('path');
-
 const app = express();
 
-// Set up Redis client
-const RedisClient = redis.createClient({
-    host: 'localhost',  // Or the Redis server's host if it's remote
-    port: 6379,         // Default Redis port
-});
+// Middleware to parse form data
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// Initialize connect-redis with express-session
-const RedisStore = connectRedis(session);
-
-// Middleware setup
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
-
-// Setup session with RedisStore
+// Session management
 app.use(session({
-    store: new RedisStore({ client: RedisClient }),
-    secret: 'your-secret-key',
-    resave: false,
-    saveUninitialized: true,
+  secret: 'your-secret-key',
+  resave: false,
+  saveUninitialized: true,
 }));
 
-// Serve static files
+// Serve static files like CSS
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Set views and view engine
-app.set('views', path.join(__dirname, 'views'));
+// Set EJS as the templating engine
 app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
 
-// Mock user data (replace this with your actual user validation)
-const users = {
-    admin: 'password', // Example: admin with password 'password'
-};
+// Routes
+app.get('/', (req, res) => {
+  res.render('index');  // Renders the home page
+});
 
-// Route for showing the login page
+// Login Route
 app.get('/login', (req, res) => {
-    res.render('login');
+  res.render('login');  // Renders the login page
 });
 
-// Route for handling the login form submission
+// Post Login
 app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-
-    // Simple user validation (replace with actual validation)
-    if (users[username] && users[username] === password) {
-        req.session.user = username; // Store username in session
-        res.redirect('/inventory');  // Redirect to inventory page after login
-    } else {
-        // Pass the error message to the login.ejs template
-        res.render('login', { error: 'Invalid username or password' });
-    }
+  const { username, password } = req.body;
+  if (username === 'admin' && password === 'password') {  // Simple check for login
+    req.session.loggedIn = true;
+    res.redirect('/inventory');  // Redirect to inventory page on success
+  } else {
+    res.render('login', { error: 'Invalid username or password' });  // Show error message
+  }
 });
 
-// Route for the inventory page (just a placeholder)
+// Inventory Route (only accessible if logged in)
 app.get('/inventory', (req, res) => {
-    if (!req.session.user) {
-        return res.redirect('/login');  // Redirect to login if user is not logged in
-    }
-    res.render('inventory'); // Render the inventory page (create this view later)
+  if (!req.session.loggedIn) {
+    return res.redirect('/login');  // Redirect to login if not logged in
+  }
+  res.render('inventory');  // Show the inventory page
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
