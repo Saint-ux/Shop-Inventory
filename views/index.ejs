@@ -1,70 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Product Inventory</title>
-    <link rel="stylesheet" href="/style.css">
-</head>
-<body>
-
+    <link rel="stylesheet" href="/styles.css" />
+    <!-- Link to your external CSS -->
+  </head>
+  <body>
     <h1>Product Inventory</h1>
+
     <h2>Total Earnings: ETB <%= totalEarnings %></h2>
+    <!-- This will show the total earnings -->
 
-    <!-- Button to show archived products -->
-    <a href="/archived">
-      <button>Show Archived Products</button>
-    </a>
-
-    <h2>Active Products</h2>
+    <!-- Display products in a table -->
     <table>
+      <thead>
         <tr>
-            <th>Name</th>
-            <th>Code</th>
-            <th>Price</th>
-            <th>Stock</th>
-            <th>Actions</th>
+          <th>Name</th>
+          <th>Code</th>
+          <th>Price</th>
+          <th>Actions</th>
         </tr>
+      </thead>
+      <tbody>
         <% products.forEach(product => { %>
-            <tr>
-                <td><%= product.name %></td>
-                <td><%= product.code %></td>
-                <td>ETB <%= product.price %></td>
-                <td><%= product.stock %></td>
-                <td>
-                    <!-- Sell product form -->
-                    <form action="/sell" method="POST">
-                        <input type="hidden" name="product_id" value="<%= product.id %>">
-                        <input type="number" name="quantity" min="1" max="<%= product.stock %>" required>
-                        <button type="submit">Sell</button>
-                    </form>
-
-                    <!-- Edit product form -->
-                    <form action="/edit-product" method="POST">
-                        <input type="hidden" name="product_id" value="<%= product.id %>">
-                        <input type="number" name="newPrice" placeholder="New Price" required>
-                        <input type="number" name="newStock" placeholder="New Stock" required>
-                        <button type="submit">Edit</button>
-                    </form>
-
-                    <!-- Archive product form -->
-                    <form action="/archive-product" method="POST">
-                        <input type="hidden" name="product_id" value="<%= product.id %>">
-                        <button type="submit" style="background-color: orange;">Archive</button>
-                    </form>
-                </td>
-            </tr>
-        <% }) %>
+        <tr>
+          <td><%= product.name %></td>
+          <td><%= product.code %></td>
+          <td><%= product.price %></td>
+          <td><a href="#">Edit</a> | <a href="#">Delete</a></td>
+        </tr>
+        <% }); %>
+      </tbody>
     </table>
 
-    <h2>Add a New Product</h2>
-    <form action="/add-product" method="POST">
-        <input type="text" name="name" placeholder="Product Name" required>
-        <input type="text" name="code" placeholder="Product Code" required>
-        <input type="number" name="price" placeholder="Price" required>
-        <input type="number" name="stock" placeholder="Stock" required>
-        <button type="submit">Add Product</button>
-    </form>
+    <!-- Button to show archived products -->
+    <a href="/archived">See Archived Products</a>
 
-</body>
+    <!-- Additional content and functionality can go here -->
+  </body>
 </html>
