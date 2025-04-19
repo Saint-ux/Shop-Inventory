@@ -1,56 +1,62 @@
 const express = require('express');
 const session = require('express-session');
+const bodyParser = require('body-parser');
+const path = require('path');
+
 const app = express();
 
-// Middleware for parsing POST request body
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Middleware setup
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
-// Setup session middleware
+// Setup session
 app.use(session({
-  secret: 'your-secret-key',
-  resave: false,
-  saveUninitialized: true
+    secret: 'your-secret-key',
+    resave: false,
+    saveUninitialized: true
 }));
 
-// Serve static files (for CSS, JS, etc.)
-app.use(express.static('public'));
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Login route (GET)
-app.get('/login', (req, res) => {
-  res.render('login', { error: null });  // Render login page with no error initially
-});
-
-// Handle login form submission (POST)
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-
-  // Basic login validation (replace with your own logic)
-  if (username === 'admin' && password === 'password') {
-    req.session.loggedIn = true;  // Set session to logged in
-    res.redirect('/');  // Redirect to the homepage (inventory page, for example)
-  } else {
-    res.render('login', { error: 'Incorrect username or password.' });  // Pass error message
-  }
-});
-
-// Check if the user is logged in
-function requireLogin(req, res, next) {
-  if (!req.session.loggedIn) {
-    return res.redirect('/login');  // Redirect to login page if not logged in
-  }
-  next();
-}
-
-// Example protected route (inventory)
-app.get('/', requireLogin, (req, res) => {
-  res.render('inventory');  // Render inventory page if logged in
-});
-
-// Set the view engine to ejs
+// Set views and view engine
+app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
+// Mock user data (replace this with your actual user validation)
+const users = {
+    admin: 'password', // Example: admin with password 'password'
+};
+
+// Route for showing the login page
+app.get('/login', (req, res) => {
+    res.render('login');
+});
+
+// Route for handling the login form submission
+app.post('/login', (req, res) => {
+    const { username, password } = req.body;
+
+    // Simple user validation (replace with actual validation)
+    if (users[username] && users[username] === password) {
+        req.session.user = username; // Store username in session
+        res.redirect('/inventory');  // Redirect to inventory page after login
+    } else {
+        // Pass the error message to the login.ejs template
+        res.render('login', { error: 'Invalid username or password' });
+    }
+});
+
+// Route for the inventory page (just a placeholder)
+app.get('/inventory', (req, res) => {
+    if (!req.session.user) {
+        return res.redirect('/login');  // Redirect to login if user is not logged in
+    }
+    res.render('inventory'); // Render the inventory page (create this view later)
+});
+
 // Start the server
-app.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
 });
