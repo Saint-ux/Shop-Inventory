@@ -1,125 +1,56 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const session = require('express-session');
 const app = express();
 
-// File path
-const DATA_PATH = path.join(__dirname, 'data.json');
-
-// Load initial data
-let { products, totalEarnings } = fs.existsSync(DATA_PATH)
-  ? JSON.parse(fs.readFileSync(DATA_PATH, 'utf-8'))
-  : { products: [], totalEarnings: 0 };
-
-// Helper to save data to file
-function saveData() {
-  fs.writeFileSync(DATA_PATH, JSON.stringify({ products, totalEarnings }, null, 2));
-}
-
-// EJS views
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.static(path.join(__dirname, 'public')));
+// Middleware for parsing POST request body
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// Session for login
+// Setup session middleware
 app.use(session({
-  secret: 'secretpass',
+  secret: 'your-secret-key',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: true
 }));
 
-// Middleware to require login for protected routes
-function requireLogin(req, res, next) {
-  if (req.session.loggedIn) {
-    return next();  // Continue to the route
-  }
-  res.redirect('/login');  // Redirect to login if not logged in
-}
+// Serve static files (for CSS, JS, etc.)
+app.use(express.static('public'));
 
-// Homepage route (protected by login)
-app.get('/', requireLogin, (req, res) => {
-  res.render('index', { products: products.filter(p => !p.archived), totalEarnings });
-});
-
-// Login route
+// Login route (GET)
 app.get('/login', (req, res) => {
-  res.render('login');
+  res.render('login', { error: null });  // Render login page with no error initially
 });
 
+// Handle login form submission (POST)
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
 
-  // Check if login credentials match
+  // Basic login validation (replace with your own logic)
   if (username === 'admin' && password === 'password') {
     req.session.loggedIn = true;  // Set session to logged in
-    res.redirect('/');  // Redirect to the homepage (inventory)
+    res.redirect('/');  // Redirect to the homepage (inventory page, for example)
   } else {
-    res.render('login', { error: 'Incorrect username or password.' });  // Show error on login page
+    res.render('login', { error: 'Incorrect username or password.' });  // Pass error message
   }
 });
 
-app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login');
-  });
-});
-
-// Inventory Routes
-app.post('/add-product', requireLogin, (req, res) => {
-  const { name, code, price, stock } = req.body;
-  products.push({
-    id: Date.now(),
-    name,
-    code,
-    price: parseFloat(price),
-    stock: parseInt(stock),
-    archived: false
-  });
-  saveData();
-  res.redirect('/');
-});
-
-app.post('/sell', requireLogin, (req, res) => {
-  const { product_id, quantity } = req.body;
-  const product = products.find(p => p.id == product_id);
-  if (product && product.stock >= quantity) {
-    product.stock -= quantity;
-    totalEarnings += product.price * quantity;
-    saveData();
-    res.redirect('/');
-  } else {
-    res.send('Not enough stock.');
+// Check if the user is logged in
+function requireLogin(req, res, next) {
+  if (!req.session.loggedIn) {
+    return res.redirect('/login');  // Redirect to login page if not logged in
   }
+  next();
+}
+
+// Example protected route (inventory)
+app.get('/', requireLogin, (req, res) => {
+  res.render('inventory');  // Render inventory page if logged in
 });
 
-app.post('/edit-product', requireLogin, (req, res) => {
-  const { product_id, newPrice, newStock } = req.body;
-  const product = products.find(p => p.id == product_id);
-  if (product) {
-    product.price = parseFloat(newPrice);
-    product.stock = parseInt(newStock);
-    saveData();
-  }
-  res.redirect('/');
-});
+// Set the view engine to ejs
+app.set('view engine', 'ejs');
 
-app.post('/archive-product', requireLogin, (req, res) => {
-  const product = products.find(p => p.id == req.body.product_id);
-  if (product) {
-    product.archived = true;
-    product.stock = 0;
-    saveData();
-  }
-  res.redirect('/');
-});
-
-app.get('/archived', requireLogin, (req, res) => {
-  res.render('archived', { products: products.filter(p => p.archived) });
-});
-
-// Start Server
+// Start the server
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
